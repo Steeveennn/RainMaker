@@ -80,7 +80,7 @@ class Helipad extends GameObject {
         rectangle.setHeight(25);
         rectangle.setTranslateX(200);
         rectangle.setTranslateY(-625);
-        add(Helipad);
+        //add(Helipad);
     }
 }
 
@@ -90,7 +90,7 @@ class Body extends GameObject{
         Ellipse body = new Ellipse();
         body.setRadiusX(10);
         body.setRadiusY(10);
-        body.setFill(Color.MAGENTA);
+        body.setFill(Color.YELLOW);
         add(body);
     }
 }
@@ -99,7 +99,7 @@ class Body extends GameObject{
 class Rotors extends GameObject {
     public Rotors() {
         Polygon polygon = new Polygon();
-        polygon.setFill(Color.BLUE);
+        polygon.setFill(Color.YELLOW);
         polygon.getPoints().addAll(new Double[]{
                 0.0, 20.0,
                 -20.0, -20.0,
@@ -229,6 +229,6 @@ public class GameApp extends Application {
         //parent.getChildren().add(c);
         //parent.getChildren().add(xAxis);
         parent.getChildren().add(hb);
-        parent.getChildren().add(hp);
+        //parent.getChildren().add(hp);
     }
 }
