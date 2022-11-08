@@ -13,6 +13,7 @@ import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
 
+
 interface Updatable{
     void update();
 }
@@ -21,6 +22,9 @@ class GameObject extends Group implements Updatable{
     protected Translate myTranslation;
     protected Rotate myRotation;
     protected Scale myScale;
+
+    private static final int GAME_WIDTH = 400;
+    private static final int GAME_HEIGTH = 800;
 
     public GameObject(){
         myTranslation = new Translate();
@@ -58,6 +62,25 @@ class GameObject extends Group implements Updatable{
 
     void add(Node node) {
         this.getChildren().add(node);
+    }
+}
+
+class Pond extends GameObject {
+
+}
+
+class Cloud extends GameObject {
+
+}
+
+class Helipad extends GameObject {
+    public Helipad() {
+        Rectangle rectangle = new Rectangle();
+        rectangle.setWidth(25);
+        rectangle.setHeight(25);
+        rectangle.setTranslateX(200);
+        rectangle.setTranslateY(-625);
+        add(Helipad);
     }
 }
 
@@ -185,6 +208,8 @@ public class GameApp extends Application {
         timer.start();
 
     }
+
+    Helipad hp;
     HelicopterBody hb;
 
     public void init(Pane parent){
@@ -204,5 +229,6 @@ public class GameApp extends Application {
         //parent.getChildren().add(c);
         //parent.getChildren().add(xAxis);
         parent.getChildren().add(hb);
+        parent.getChildren().add(hp);
     }
 }
