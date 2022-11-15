@@ -15,6 +15,8 @@ import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
 import org.w3c.dom.css.Rect;
 
+import java.util.Random;
+
 public class GameApp extends Application {
     public void start(Stage primaryStage) {
         Game root = new Game();
@@ -108,6 +110,7 @@ class GameObject extends Group implements Updateable {
 }
 
 class Pond extends GameObject {
+    private Random rand = new Random();
     public Pond() {
         Circle pond = new Circle(10);
         pond.setFill(Color.BLUE);
@@ -119,7 +122,7 @@ class Pond extends GameObject {
         pondPercent.setFill(Color.WHITE);
         pondPercent.setFont(Font.font(15));
 
-        this.translate(100, 100);
+        this.translate(rand.nextInt(450)+10, rand.nextInt(750)+10);
         this.getTransforms().clear();
         this.getTransforms().add(translation);
 
