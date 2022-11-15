@@ -13,6 +13,7 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
+import org.w3c.dom.css.Rect;
 
 public class GameApp extends Application {
     public void start(Stage primaryStage) {
@@ -49,12 +50,55 @@ public class GameApp extends Application {
 }
 
 // Rules of the game and contains the game objects
-public class Game extends Pane {
+class Game extends Pane {
+    Helipad helipad;
+    public Game() {
+        this.getChildren().clear();
+        helipad = new Helipad();
 
+        this.getChildren().add(helipad);
+
+        AnimationTimer timer = new AnimationTimer() {
+            @Override
+            public void handle(long nano) {
+
+            }
+        };
+        timer.start();
+    }
 }
 
 class GameObject extends Group implements Updateable {
+    Scale scale;
+    Translate translation;
+    Rotate rotate;
 
+    public GameObject() {
+        scale = new Scale();
+        translation = new Translate();
+    }
+
+    public void scale(double sx, double sy) {
+        scale.setX(sx);
+        scale.setY(sy);
+    }
+
+    public void translate(double tx, double ty) {
+        translation.setX(tx);
+        translation.setY(ty);
+    }
+
+    void add(Node node) {
+        this.getChildren().add(node);
+    }
+
+    public void update() {
+        for(Node n : getChildren()) {
+            if(n instanceof Updateable) {
+                ((Updateable)n).update();
+            }
+        }
+    }
 }
 
 class Pond extends GameObject {
@@ -66,7 +110,22 @@ class Cloud extends GameObject {
 }
 
 class Helipad extends GameObject {
+    public Helipad() {
+        Rectangle helipadOut = new Rectangle(80, 80);
+        helipadOut.setStroke((Color.GRAY));
 
+        Circle helipadIn = new Circle(30);
+        helipadIn.setCenterX(helipadOut.getWidth()/2);
+        helipadIn.setCenterY(helipadOut.getHeight()/2);
+        helipadIn.setStroke(Color.GRAY);
+
+        this.translate(-40,40);
+        this.getTransforms().clear();
+        this.getTransforms().add(translation);
+
+        add(helipadOut);
+        add(helipadIn);
+    }
 }
 
 class Helicopter extends GameObject {
