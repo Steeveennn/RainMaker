@@ -53,13 +53,16 @@ public class GameApp extends Application {
 class Game extends Pane {
     Helipad helipad;
     Helicopter helicopter;
+    Pond pond;
     public Game() {
         this.getChildren().clear();
         helipad = new Helipad();
         helicopter = new Helicopter();
+        pond = new Pond();
 
         this.getChildren().add(helipad);
         this.getChildren().add(helicopter);
+        this.getChildren().add(pond);
 
         AnimationTimer timer = new AnimationTimer() {
             @Override
@@ -105,7 +108,24 @@ class GameObject extends Group implements Updateable {
 }
 
 class Pond extends GameObject {
+    public Pond() {
+        Circle pond = new Circle(10);
+        pond.setFill(Color.BLUE);
 
+        Text pondPercent = new Text("0%");
+        pondPercent.setScaleY(-1);
+        pondPercent.setTranslateX(-5);
+        pondPercent.setTranslateY(5);
+        pondPercent.setFill(Color.WHITE);
+        pondPercent.setFont(Font.font(15));
+
+        this.translate(100, 100);
+        this.getTransforms().clear();
+        this.getTransforms().add(translation);
+
+        add(pond);
+        add(pondPercent);
+    }
 }
 
 class Cloud extends GameObject {
