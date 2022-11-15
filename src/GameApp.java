@@ -52,11 +52,14 @@ public class GameApp extends Application {
 // Rules of the game and contains the game objects
 class Game extends Pane {
     Helipad helipad;
+    Helicopter helicopter;
     public Game() {
         this.getChildren().clear();
         helipad = new Helipad();
+        helicopter = new Helicopter();
 
         this.getChildren().add(helipad);
+        this.getChildren().add(helicopter);
 
         AnimationTimer timer = new AnimationTimer() {
             @Override
@@ -119,7 +122,7 @@ class Helipad extends GameObject {
         helipadIn.setCenterY(helipadOut.getHeight()/2);
         helipadIn.setStroke(Color.GRAY);
 
-        this.translate(-40,40);
+        this.translate(-40,-40);
         this.getTransforms().clear();
         this.getTransforms().add(translation);
 
@@ -129,7 +132,17 @@ class Helipad extends GameObject {
 }
 
 class Helicopter extends GameObject {
+    public Helicopter() {
+        Ellipse helicopter = new Ellipse();
+        helicopter.setRadiusX(10);
+        helicopter.setRadiusY(10);
+        helicopter.setFill(Color.YELLOW);
+        add(helicopter);
 
+        Line line = new Line(0, 10, 0, 30);
+        line.setStroke(Color.YELLOW);
+        add(line);
+    }
 }
 
 interface Updateable {
