@@ -56,15 +56,18 @@ class Game extends Pane {
     Helipad helipad;
     Helicopter helicopter;
     Pond pond;
+    Cloud cloud;
     public Game() {
         this.getChildren().clear();
         helipad = new Helipad();
         helicopter = new Helicopter();
         pond = new Pond();
+        cloud = new Cloud();
 
         this.getChildren().add(helipad);
         this.getChildren().add(helicopter);
         this.getChildren().add(pond);
+        this.getChildren().add(cloud);
 
         AnimationTimer timer = new AnimationTimer() {
             @Override
@@ -122,7 +125,7 @@ class Pond extends GameObject {
         pondPercent.setFill(Color.WHITE);
         pondPercent.setFont(Font.font(15));
 
-        this.translate(rand.nextInt(450)+10, rand.nextInt(750)+10);
+        this.translate(rand.nextInt(400)+10, rand.nextInt(700)+10);
         this.getTransforms().clear();
         this.getTransforms().add(translation);
 
@@ -132,7 +135,25 @@ class Pond extends GameObject {
 }
 
 class Cloud extends GameObject {
+    private Random rand = new Random();
+    public Cloud() {
+        Circle cloud = new Circle(50);
+        cloud.setFill(Color.WHITE);
 
+        Text cloudPercent = new Text("100%");
+        cloudPercent.setScaleY(-1);
+        cloudPercent.setTranslateX(-15);
+        cloudPercent.setTranslateY(5);
+        cloudPercent.setFill(Color.BLUE);
+        cloudPercent.setFont(Font.font(15));
+
+        this.translate(rand.nextInt(400)+10, rand.nextInt(700)+10);
+        this.getTransforms().clear();
+        this.getTransforms().add(translation);
+
+        add(cloud);
+        add(cloudPercent);
+    }
 }
 
 class Helipad extends GameObject {
