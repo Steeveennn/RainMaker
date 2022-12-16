@@ -31,16 +31,16 @@ public class GameApp extends Application {
 
         scene.setOnKeyPressed(e -> {
             if(e.getCode() == KeyCode.UP) {
-
+                root.forward();
             }
             if(e.getCode() == KeyCode.DOWN) {
-
+                root.back();
             }
             if(e.getCode() == KeyCode.LEFT) {
-
+                root.left();
             }
             if(e.getCode() == KeyCode.RIGHT) {
-
+                root.right();
             }
         });
         primaryStage.show();
@@ -57,6 +57,7 @@ class Game extends Pane {
     Helicopter helicopter;
     Pond pond;
     Cloud cloud;
+    int counter = 0;
     public Game() {
         this.getChildren().clear();
         helipad = new Helipad();
@@ -72,10 +73,28 @@ class Game extends Pane {
         AnimationTimer timer = new AnimationTimer() {
             @Override
             public void handle(long nano) {
-
+                if(counter ++ %2 == 0) {
+                    helicopter.update();
+                }
             }
         };
         timer.start();
+    }
+
+    public void forward() {
+        helicopter.forward();
+    }
+
+    public void back() {
+        helicopter.back();
+    }
+
+    public void left() {
+        helicopter.left();
+    }
+
+    public void right() {
+        helicopter.right();
     }
 }
 
@@ -87,6 +106,13 @@ class GameObject extends Group implements Updateable {
     public GameObject() {
         scale = new Scale();
         translation = new Translate();
+        rotate = new Rotate();
+    }
+
+    public void rotate(double degrees) {
+        rotate.setAngle(degrees);
+        rotate.setPivotX(0);
+        rotate.setPivotY(0);
     }
 
     public void scale(double sx, double sy) {
@@ -176,6 +202,10 @@ class Helipad extends GameObject {
 }
 
 class Helicopter extends GameObject {
+    double speedVertical;
+    double maxSpeed = 10;
+    double maxSpeedBack = -2;
+    double rotateHeli;
     public Helicopter() {
         Ellipse helicopter = new Ellipse();
         helicopter.setRadiusX(10);
@@ -186,6 +216,33 @@ class Helicopter extends GameObject {
         Line line = new Line(0, 10, 0, 30);
         line.setStroke(Color.YELLOW);
         add(line);
+    }
+
+    public void forward() {
+        if(speedVertical < maxSpeed) {
+            speedVertical = speedVertical + 0.1;
+        }
+    }
+
+    public void back() {
+        if(speedVertical > maxSpeedBack) {
+            speedVertical = speedVertical - 0.1;
+        }
+    }
+
+    public void left() {
+        rotateHeli = rotateHeli + 15;
+    }
+
+    public void right() {
+        rotateHeli = rotateHeli - 15;
+    }
+
+    public void update() {
+        this.rotate(rotateHeli);
+        this.getTransforms().clear();
+        translation.setY(translation.getY() + speedVertical);
+        this.getTransforms().addAll(translation, rotate);
     }
 }
 
