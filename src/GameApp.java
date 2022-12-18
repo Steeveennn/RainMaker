@@ -52,6 +52,9 @@ public class GameApp extends Application {
             if(e.getCode() == KeyCode.SPACE) {
                 root.seedCloud();
             }
+            if(e.getCode() == KeyCode.R) {
+                root.reset();
+            }
 
         });
         primaryStage.show();
@@ -71,6 +74,10 @@ class Game extends Pane {
     BackgroundImage backgroundImage;
     int counter = 0;
     public Game() {
+        init();
+    }
+
+    public void init() {
         this.getChildren().clear();
         helipad = new Helipad();
         helicopter = new Helicopter();
@@ -124,6 +131,10 @@ class Game extends Pane {
         if(!Shape.intersect(cloud.getBounds(), helicopter.getBounds()).getBoundsInLocal().isEmpty()) {
             cloud.seedCloud();
         }
+    }
+
+    public void reset() {
+        init();
     }
 
 }
@@ -435,6 +446,12 @@ class Helicopter extends GameObject {
         }
     }
 
+    public void fuelDecrease() {
+        if(fuel != 0) {
+            fuel--;
+        }
+    }
+
     public void ignition() {
         ignition =! ignition;
     }
@@ -445,6 +462,9 @@ class Helicopter extends GameObject {
         translation.setX(translation.getX() + Math.sin(Math.toRadians(rotateHeli)) * -speedVertical);
         translation.setY(translation.getY() + Math.cos(Math.toRadians(rotateHeli)) * speedVertical);
         this.getTransforms().addAll(translation, rotate);
+
+        this.fuelDecrease();
+        helicopterFuel.setText("F" + fuel);
     }
 }
 
