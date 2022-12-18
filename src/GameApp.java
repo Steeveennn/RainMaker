@@ -3,6 +3,8 @@ import javafx.application.Application;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -24,7 +26,7 @@ public class GameApp extends Application {
         root.setScaleY(-1);
         root.setTranslateX(250);
         root.setTranslateY(-70);
-        Scene scene = new Scene(root, 500, 800);
+        Scene scene = new Scene(root, 800, 800);
         scene.setFill(Color.BLACK);
         primaryStage.setScene(scene);
         primaryStage.setTitle("RainMaker");
@@ -42,6 +44,13 @@ public class GameApp extends Application {
             if(e.getCode() == KeyCode.RIGHT) {
                 root.right();
             }
+            if(e.getCode() == KeyCode.I) {
+                root.ignition();
+            }
+            if(e.getCode() == KeyCode.SPACE) {
+                root.seedCloud();
+            }
+
         });
         primaryStage.show();
     }
@@ -57,6 +66,7 @@ class Game extends Pane {
     Helicopter helicopter;
     Pond pond;
     Cloud cloud;
+    BackgroundImage backgroundImage;
     int counter = 0;
     public Game() {
         this.getChildren().clear();
@@ -64,17 +74,24 @@ class Game extends Pane {
         helicopter = new Helicopter();
         pond = new Pond();
         cloud = new Cloud();
+        backgroundImage = new BackgroundImage();
 
+        this.getChildren().add(backgroundImage);
         this.getChildren().add(helipad);
-        this.getChildren().add(helicopter);
         this.getChildren().add(pond);
         this.getChildren().add(cloud);
+        this.getChildren().add(helicopter);
 
         AnimationTimer timer = new AnimationTimer() {
             @Override
             public void handle(long nano) {
                 if(counter ++ %2 == 0) {
                     helicopter.update();
+                    cloud.update();
+                    pond.update();
+                    if(cloud.pondFilling()) {
+                        pond.pondFill();
+                    }
                 }
             }
         };
@@ -96,6 +113,17 @@ class Game extends Pane {
     public void right() {
         helicopter.right();
     }
+
+    public void ignition() {
+        helicopter.ignition();
+    }
+
+    public void seedCloud() {
+        if(!Shape.intersect(cloud.getBounds(), helicopter.getBounds()).getBoundsInLocal().isEmpty()) {
+            cloud.seedCloud();
+        }
+    }
+
 }
 
 class GameObject extends Group implements Updateable {
@@ -138,48 +166,135 @@ class GameObject extends Group implements Updateable {
     }
 }
 
+class BackgroundImage extends GameObject {
+    public BackgroundImage() {
+        Image background = new Image("background.jpg");
+        ImageView backgroundIM = new ImageView(background);
+        backgroundIM.setTranslateX(-300);
+        backgroundIM.setTranslateY(-70);
+        backgroundIM.setFitHeight(800);
+        backgroundIM.setPreserveRatio(true);
+        this.getChildren().add(backgroundIM);
+    }
+}
+
+class GameText extends GameObject{
+
+    Text Text;
+
+    public void setColor(Color color){
+        Text.setFill(color);
+    }
+
+    public GameText(String textString){
+        Text = new Text(textString);
+        Text.setScaleY(-1);
+        add(Text);
+    }
+    public GameText(){
+        this("");
+    }
+    public void setText(String textString){
+        Text.setText(textString);
+    }
+
+}
+
 class Pond extends GameObject {
     private Random rand = new Random();
+    int radius = 10;
+    int capacity = 0;
+    Circle pond = new Circle(radius);
+    GameText pondPercent = new GameText(capacity + "%");
     public Pond() {
-        Circle pond = new Circle(10);
         pond.setFill(Color.BLUE);
-
-        Text pondPercent = new Text("0%");
-        pondPercent.setScaleY(-1);
         pondPercent.setTranslateX(-5);
         pondPercent.setTranslateY(5);
-        pondPercent.setFill(Color.WHITE);
-        pondPercent.setFont(Font.font(15));
+        pondPercent.setColor(Color.WHITE);
 
-        this.translate(rand.nextInt(400)+10, rand.nextInt(700)+10);
+        this.translate(-100, 400);
+        this.translate(rand.nextInt(580), rand.nextInt(580));
         this.getTransforms().clear();
         this.getTransforms().add(translation);
 
         add(pond);
         add(pondPercent);
     }
+
+    public void pondFill() {
+        if(capacity <= 100) {
+            pondPercent.setText(capacity++ + "%");
+            radius++;
+        }
+    }
+
+    public void update() {
+        pondPercent.setText(capacity + "%");
+        pond.setRadius(radius);
+    }
 }
 
 class Cloud extends GameObject {
     private Random rand = new Random();
+    Circle cloud = new Circle(50);
+    Rectangle boundingBox;
+    int saturation = 0;
+    int delayCounter = 0;
+    GameText cloudPercent = new GameText(saturation + "%");
+    Boolean cloudIsThirty = false;
     public Cloud() {
-        Circle cloud = new Circle(50);
         cloud.setFill(Color.WHITE);
-
-        Text cloudPercent = new Text("100%");
-        cloudPercent.setScaleY(-1);
         cloudPercent.setTranslateX(-15);
         cloudPercent.setTranslateY(5);
-        cloudPercent.setFill(Color.BLUE);
-        cloudPercent.setFont(Font.font(15));
+        cloudPercent.setColor(Color.BLUE);
 
-        this.translate(rand.nextInt(400)+10, rand.nextInt(700)+10);
+        boundingBox = new Rectangle();
+        boundingBox.setTranslateX(-50);
+        boundingBox.setTranslateY(-50);
+        boundingBox.setWidth(100);
+        boundingBox.setHeight(100);
+        boundingBox.setStroke((Color.YELLOW));
+        boundingBox.setFill(Color.TRANSPARENT);
+        add(boundingBox);
+
+        this.translate(150, 200);
         this.getTransforms().clear();
         this.getTransforms().add(translation);
 
         add(cloud);
         add(cloudPercent);
     }
+
+    public Shape getBounds() {
+        return boundingBox;
+    }
+
+    public boolean pondFilling() {
+        return cloudIsThirty;
+    }
+
+    public void seedCloud() {
+        if(saturation <= 100) {
+            cloudPercent.setText(saturation++ + "%");
+        }
+    }
+
+    public void update() {
+        if(delayCounter == 0) {
+            delayCounter = 50;
+            if (saturation != 0) {
+                cloudPercent.setText(saturation-- + "%");
+                if(saturation >= 30) {
+                    cloudIsThirty = true;
+                }
+            }
+        }
+        else if(delayCounter < 51) {
+            delayCounter--;
+            cloudIsThirty = false;
+        }
+    }
+
 }
 
 class Helipad extends GameObject {
@@ -206,6 +321,8 @@ class Helicopter extends GameObject {
     double maxSpeed = 10;
     double maxSpeedBack = -2;
     double rotateHeli;
+    boolean ignition = false;
+    Rectangle boundingBox;
     public Helicopter() {
         Ellipse helicopter = new Ellipse();
         helicopter.setRadiusX(10);
@@ -213,35 +330,65 @@ class Helicopter extends GameObject {
         helicopter.setFill(Color.YELLOW);
         add(helicopter);
 
+        Text helicopterFuel = new Text("F:25000");
+        helicopterFuel.setScaleY(-1);
+        helicopterFuel.setTranslateX(-25);
+        helicopterFuel.setTranslateY(-15);
+        helicopterFuel.setFill(Color.YELLOW);
+        helicopterFuel.setFont(Font.font(15));
+        add(helicopterFuel);
+
+        boundingBox = new Rectangle();
+        boundingBox.setTranslateX(-30);
+        boundingBox.setTranslateY(-30);
+        boundingBox.setWidth(60);
+        boundingBox.setHeight(60);
+        boundingBox.setStroke((Color.YELLOW));
+        boundingBox.setFill(Color.TRANSPARENT);
+        add(boundingBox);
+
         Line line = new Line(0, 10, 0, 30);
         line.setStroke(Color.YELLOW);
         add(line);
     }
 
+    public Shape getBounds() {
+        return boundingBox;
+    }
+
     public void forward() {
-        if(speedVertical < maxSpeed) {
+        if(ignition && speedVertical < maxSpeed) {
             speedVertical = speedVertical + 0.1;
         }
     }
 
     public void back() {
-        if(speedVertical > maxSpeedBack) {
+        if(ignition && speedVertical > maxSpeedBack) {
             speedVertical = speedVertical - 0.1;
         }
     }
 
     public void left() {
-        rotateHeli = rotateHeli + 15;
+        if(ignition) {
+            rotateHeli = rotateHeli + 15;
+        }
     }
 
     public void right() {
-        rotateHeli = rotateHeli - 15;
+        if(ignition) {
+            rotateHeli = rotateHeli - 15;
+        }
+    }
+
+    public void ignition() {
+        ignition =! ignition;
     }
 
     public void update() {
         this.rotate(rotateHeli);
         this.getTransforms().clear();
-        translation.setY(translation.getY() + speedVertical);
+        translation.setX(translation.getX() + Math.sin(Math.toRadians(rotateHeli)) * -speedVertical);
+        translation.setY(translation.getY() + Math.cos(Math.toRadians(rotateHeli)) * speedVertical);
         this.getTransforms().addAll(translation, rotate);
     }
 }
