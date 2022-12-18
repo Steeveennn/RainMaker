@@ -1,5 +1,6 @@
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
+import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -20,13 +21,14 @@ import org.w3c.dom.css.Rect;
 import java.util.Random;
 
 public class GameApp extends Application {
+    static final Point2D gameSize = new Point2D(800, 800);
     public void start(Stage primaryStage) {
         Game root = new Game();
 
         root.setScaleY(-1);
-        root.setTranslateX(250);
-        root.setTranslateY(-70);
-        Scene scene = new Scene(root, 800, 800);
+        //root.setTranslateX(250);
+        //root.setTranslateY(-70);
+        Scene scene = new Scene(root, gameSize.getX(), gameSize.getY());
         scene.setFill(Color.BLACK);
         primaryStage.setScene(scene);
         primaryStage.setTitle("RainMaker");
@@ -307,7 +309,8 @@ class Helipad extends GameObject {
         helipadIn.setCenterY(helipadOut.getHeight()/2);
         helipadIn.setStroke(Color.GRAY);
 
-        this.translate(-40,-40);
+        this.translate((GameApp.gameSize.getX() - 80) /2,
+        GameApp.gameSize.getY() / 6);
         this.getTransforms().clear();
         this.getTransforms().add(translation);
 
@@ -316,26 +319,78 @@ class Helipad extends GameObject {
     }
 }
 
+class HeliBody extends GameObject {
+    public HeliBody() {
+        Image heliBody = new Image("helicopter.png");
+        ImageView heliIM = new ImageView(heliBody);
+        this.getChildren().add(heliIM);
+
+        heliIM.setTranslateX(-111);
+        heliIM.setTranslateY(-230);
+        heliIM.setScaleX(0.2);
+        heliIM.setScaleY(-0.2);
+        //scale(2, 2);
+
+    }
+}
+
+class HeliBlade extends GameObject {
+    int bladeSpeed = 0;
+
+    public HeliBlade() {
+        Line blade = new Line();
+
+        blade.setStrokeWidth(5);
+        blade.setStartX(-25);
+        blade.setEndX(25);
+        blade.setStartY(-25);
+        blade.setEndY(25);
+        blade.setFill(Color.BLACK);
+        this.getChildren().add(blade);
+
+        AnimationTimer timer = new AnimationTimer() {
+            @Override
+            public void handle(long nano) {
+                HeliBlade.this.setRotate(HeliBlade.this.getRotate() + bladeSpeed);
+            }
+        };
+        timer.start();
+    }
+
+    public void update(int bladeSpeed) {
+        this.bladeSpeed = bladeSpeed;
+    }
+}
+
 class Helicopter extends GameObject {
     double speedVertical;
     double maxSpeed = 10;
     double maxSpeedBack = -2;
     double rotateHeli;
+    int fuel = 25000;
     boolean ignition = false;
     Rectangle boundingBox;
+    HeliBody heliBody = new HeliBody();
+    HeliBlade heliBlade = new HeliBlade();
+    GameText helicopterFuel = new GameText("F:" + fuel);
     public Helicopter() {
         Ellipse helicopter = new Ellipse();
         helicopter.setRadiusX(10);
         helicopter.setRadiusY(10);
         helicopter.setFill(Color.YELLOW);
-        add(helicopter);
 
-        Text helicopterFuel = new Text("F:25000");
-        helicopterFuel.setScaleY(-1);
+        this.translate(GameApp.gameSize.getX() / 2,
+          GameApp.gameSize.getY()/ 4.5);
+         this.getTransforms().clear();
+         this.getTransforms().add(translation);
+
+        add(helicopter);
+        add(heliBody);
+        add(heliBlade);
+
         helicopterFuel.setTranslateX(-25);
         helicopterFuel.setTranslateY(-15);
-        helicopterFuel.setFill(Color.YELLOW);
-        helicopterFuel.setFont(Font.font(15));
+        helicopterFuel.setColor(Color.YELLOW);
         add(helicopterFuel);
 
         boundingBox = new Rectangle();
