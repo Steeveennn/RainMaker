@@ -524,7 +524,7 @@ class Cloud extends GameObject {
     int g = 255;
     int b = 255;
     int cloudPositionX = rand.nextInt(200);
-    double cloudSpeed = 0.1;
+    double cloudSpeed = 1;
     Circle cloud = new Circle(50);
     Rectangle boundingBox;
     GameText cloudPercent = new GameText(saturation + "%");
