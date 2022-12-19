@@ -1,9 +1,12 @@
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -18,16 +21,18 @@ import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
 import org.w3c.dom.css.Rect;
 
+import java.util.LinkedList;
 import java.util.Random;
 
+//Setup, show scene, and set up keyboard events
 public class GameApp extends Application {
-    static final Point2D gameSize = new Point2D(800, 800);
+    final static int GAME_HEIGHT = 800;
+    final static int GAME_WIDTH = 800;
+    static final Point2D gameSize = new Point2D(GAME_HEIGHT, GAME_WIDTH);
     public void start(Stage primaryStage) {
         Game root = new Game();
 
         root.setScaleY(-1);
-        //root.setTranslateX(250);
-        //root.setTranslateY(-70);
         Scene scene = new Scene(root, gameSize.getX(), gameSize.getY());
         scene.setFill(Color.BLACK);
         primaryStage.setScene(scene);
@@ -50,7 +55,7 @@ public class GameApp extends Application {
                 root.ignition();
             }
             if(e.getCode() == KeyCode.SPACE) {
-                root.seedCloud();
+                root.cloudPercentSeed();
             }
             if(e.getCode() == KeyCode.R) {
                 root.reset();
@@ -69,20 +74,54 @@ public class GameApp extends Application {
 class Game extends Pane {
     Helipad helipad;
     Helicopter helicopter;
-    Pond pond;
-    Cloud cloud;
+    //Pond pond;
+    PondList pond;
+    //Cloud cloud;
+    CloudList cloud;
     BackgroundImage backgroundImage;
     int counter = 0;
     public Game() {
         init();
     }
 
+    // AnimationTimer to update the GameObjects on the screen
+    AnimationTimer timer = new AnimationTimer() {
+        @Override
+        public void handle(long nano) {
+            if(counter ++ %2 == 0) {
+                helicopter.update();
+
+                // Updates the clouds on the screen
+                cloud.update();
+                for(int i = 0; i < cloud.sizeOfCloudList(); i++) {
+                    cloud.getCloud(i).update();
+                }
+
+                // Updates the ponds on the screen
+                for(int i = 0; i < pond.sizeOfPondList(); i++) {
+                    pond.getPond(i).update();
+                }
+
+                // Updates the pond's capacity
+                for(int i = 0; i < cloud.sizeOfCloudList(); i++) {
+                    for(int j = 0; j < pond.sizeOfPondList(); j++) {
+                        if(cloud.getCloud(i).pondFilling()) {
+                            pond.getPond(j).pondFill();
+                        }
+                    }
+                }
+                winCondition();
+            }
+        }
+    };
+
+    // Initializes all the game objects
     public void init() {
         this.getChildren().clear();
         helipad = new Helipad();
         helicopter = new Helicopter();
-        pond = new Pond();
-        cloud = new Cloud();
+        pond = new PondList();
+        cloud = new CloudList();
         backgroundImage = new BackgroundImage();
 
         this.getChildren().add(backgroundImage);
@@ -91,19 +130,6 @@ class Game extends Pane {
         this.getChildren().add(cloud);
         this.getChildren().add(helicopter);
 
-        AnimationTimer timer = new AnimationTimer() {
-            @Override
-            public void handle(long nano) {
-                if(counter ++ %2 == 0) {
-                    helicopter.update();
-                    cloud.update();
-                    pond.update();
-                    if(cloud.pondFilling()) {
-                        pond.pondFill();
-                    }
-                }
-            }
-        };
         timer.start();
     }
 
@@ -127,13 +153,59 @@ class Game extends Pane {
         helicopter.ignition();
     }
 
-    public void seedCloud() {
-        if(!Shape.intersect(cloud.getBounds(), helicopter.getBounds()).getBoundsInLocal().isEmpty()) {
-            cloud.seedCloud();
+    public void cloudPercentSeed() {
+        for(int i = 0; i < cloud.sizeOfCloudList(); i++) {
+            if((helicopter.state instanceof HelicopterReady) && (!Shape.intersect(cloud.getCloud(i).getBounds(), helicopter.getBounds()).getBoundsInLocal().isEmpty())) {
+                cloud.getCloud(i).seedCloud();
+            }
+        }
+    }
+
+    public void winCondition() {
+        StringBuilder message = new StringBuilder();
+        for(int i = 0; i < pond.sizeOfPondList(); i++) {
+            if (pond.getPond(i).capacity == 100 && !Shape.intersect(helicopter.getBounds(),
+                    helipad.getBounds()).getBoundsInLocal().isEmpty() && helicopter.state instanceof HelicopterOff) {
+                timer.stop();
+                message.append("You won, play again?");
+
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION,
+                        message.toString(), ButtonType.YES, ButtonType.NO);
+
+                alert.setOnHidden(evt -> {
+                    if (alert.getResult() == ButtonType.YES) {
+                        reset();
+                    } else {
+                        Platform.exit();
+                    }
+                });
+                alert.show();
+            } else if (helicopter.emptyFuel()) {
+                timer.stop();
+                message.append("You lost, play again?");
+
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION,
+                        message.toString(), ButtonType.YES, ButtonType.NO);
+
+                alert.setOnHidden(evt -> {
+                    if (alert.getResult() == ButtonType.YES) {
+                        reset();
+                    } else {
+                        Platform.exit();
+                    }
+                });
+                alert.show();
+            }
         }
     }
 
     public void reset() {
+        pond.reset();
+        cloud.reset();
+        helicopter.reset();
+
+        timer.stop();
+
         init();
     }
 
@@ -183,8 +255,7 @@ class BackgroundImage extends GameObject {
     public BackgroundImage() {
         Image background = new Image("background.jpg");
         ImageView backgroundIM = new ImageView(background);
-        backgroundIM.setTranslateX(-300);
-        backgroundIM.setTranslateY(-70);
+        backgroundIM.setTranslateX(-220);
         backgroundIM.setFitHeight(800);
         backgroundIM.setPreserveRatio(true);
         this.getChildren().add(backgroundIM);
@@ -210,23 +281,57 @@ class GameText extends GameObject{
     public void setText(String textString){
         Text.setText(textString);
     }
-
 }
 
+class PondList extends GameObject {
+    LinkedList<Pond> pondList;
+    int pondRandom = 0;
+    Random rand = new Random();
+
+    public PondList() {
+        pondList = new LinkedList<>();
+        for(int i = 0; i < rand.nextInt(2, 5); i++) {
+            Pond pond = new Pond();
+            pondList.add(pond);
+        }
+        this.getChildren().addAll(pondList);
+    }
+
+    public Pond getPond(int x) {
+        return pondList.get(x);
+    }
+
+    public int sizeOfPondList() {
+        return pondList.size();
+    }
+
+    public void reset() {
+        for(Pond pond: this.pondList) {
+            pond.reset();
+        }
+    }
+
+    public void update() {
+
+    }
+}
+
+// Pond class
 class Pond extends GameObject {
     private Random rand = new Random();
-    int radius = 10;
-    int capacity = 0;
+    int capacity = rand.nextInt(30);
+    int radius = capacity;
     Circle pond = new Circle(radius);
     GameText pondPercent = new GameText(capacity + "%");
+    Boolean pondFull = false;
     public Pond() {
         pond.setFill(Color.BLUE);
         pondPercent.setTranslateX(-5);
         pondPercent.setTranslateY(5);
         pondPercent.setColor(Color.WHITE);
 
-        this.translate(-100, 400);
-        this.translate(rand.nextInt(580), rand.nextInt(580));
+        this.translate(rand.nextDouble(GameApp.gameSize.getX() / 3),
+                rand.nextDouble(GameApp.gameSize.getY()));
         this.getTransforms().clear();
         this.getTransforms().add(translation);
 
@@ -234,29 +339,180 @@ class Pond extends GameObject {
         add(pondPercent);
     }
 
+    // Fills pond up as long as it's not full
     public void pondFill() {
-        if(capacity <= 100) {
+        if(capacity < 100) {
             pondPercent.setText(capacity++ + "%");
+            System.out.println(capacity);
             radius++;
         }
     }
 
+    // Resets pond
+    public void reset() {
+        capacity = 0;
+        radius = 10;
+    }
+
+    // Updates the pond area based on the value of capacity
     public void update() {
         pondPercent.setText(capacity + "%");
         pond.setRadius(radius);
     }
 }
 
+// Cloud list
+class CloudList extends GameObject {
+    LinkedList<Cloud> cloudList;
+    CloudStates state;
+    int cloudRandom = 0;
+    Random rand = new Random();
+
+    public CloudList() {
+        cloudList = new LinkedList<>();
+        for(int i = 0; i < rand.nextInt(2, 5); i++) {
+            Cloud cloud = new Cloud();
+            cloudList.add(cloud);
+        }
+        this.getChildren().addAll(cloudList);
+    }
+
+    public Cloud getCloud(int x) {
+        return cloudList.get(x);
+    }
+
+    public int sizeOfCloudList() {
+        return cloudList.size();
+    }
+
+    public void reset() {
+        for(Cloud cloud: this.cloudList) {
+            cloud.reset();
+        }
+    }
+
+    public void update() {
+        // Loops through each cloud
+        for(int i = 0; i < sizeOfCloudList(); i++) {
+            // If clouds are dead, 1 to 2 respawn
+            if(cloudList.get(i).cloudStateDead()) {
+                cloudRandom = rand.nextInt(2);
+                // If 1 respawns, add it to the cloud list
+                if(cloudRandom == 1) {
+                    Cloud cloud = new Cloud();
+                    cloudList.add(cloud);
+                    getChildren().add(cloud);
+                }
+                // If 1 or 2 respawns, add it to the cloud list
+                if(cloudRandom == 1 || cloudRandom == 2) {
+                    Cloud cloud = new Cloud();
+                    cloudList.add(cloud);
+                    getChildren().add(cloud);
+                }
+                // If 3 or 4 respawns, add it to the cloud list
+                if(cloudRandom == 3 || cloudRandom == 4) {
+                    cloudRandom = rand.nextInt(3);
+                    if(cloudRandom == 2) {
+                        Cloud cloud = new Cloud();
+                        cloudList.add(cloud);
+                        getChildren().add(cloud);
+                    }
+                }
+                // Removes dead clouds from the list
+                getChildren().remove(cloudList.get(i));
+                cloudList.remove(i);
+                i--;
+            }
+        }
+    }
+}
+
+// Cloud states
+abstract class CloudStates {
+    Cloud cloud;
+    public CloudStates(Cloud cloud) {
+        this.cloud = cloud;
+    }
+
+    abstract void whichState(double x);
+    abstract boolean cloudIsDead();
+}
+
+// Handles what happens when cloud is alive
+class CloudIsAlive extends CloudStates {
+    public CloudIsAlive(Cloud cloud) {
+        super(cloud);
+    }
+
+    @Override
+    void whichState(double cloudPositionX) {
+        if(cloudPositionX > 0) {
+            cloud.changeState(new CloudOnScreen(cloud));
+        }
+    }
+
+    @Override
+    boolean cloudIsDead() {
+        return false;
+    }
+}
+
+// Handles what happens while the cloud is on the screen
+class CloudOnScreen extends CloudStates {
+    public CloudOnScreen(Cloud cloud) {
+        super(cloud);
+    }
+
+    @Override
+    void whichState(double cloudPositionX) {
+        if(cloudPositionX > GameApp.gameSize.getX()) {
+            cloud.changeState(new CloudIsDead(cloud));
+        }
+    }
+
+    @Override
+    boolean cloudIsDead() {
+        return false;
+    }
+}
+
+// Handles what happens when the cloud goes off-screen (dies)
+class CloudIsDead extends CloudStates {
+    CloudIsDead(Cloud cloud) {
+        super(cloud);
+    }
+
+    @Override
+    void whichState(double x) {
+
+    }
+
+    @Override
+    boolean cloudIsDead() {
+        return true;
+    }
+}
+
+// Cloud class
 class Cloud extends GameObject {
     private Random rand = new Random();
     Circle cloud = new Circle(50);
     Rectangle boundingBox;
     int saturation = 0;
     int delayCounter = 0;
+    int r = 255;
+    int g = 255;
+    int b = 255;
+    double cloudSpeed = 0.5;
     GameText cloudPercent = new GameText(saturation + "%");
     Boolean cloudIsThirty = false;
+    CloudStates state;
+    int cloudPositionX = rand.nextInt(200);
+    double getCloudPositionY = rand.nextDouble(GameApp.gameSize.getY() / 3,
+     GameApp.gameSize.getY());
     public Cloud() {
-        cloud.setFill(Color.WHITE);
+        state = new CloudIsAlive(this);
+        cloud.setFill(Color.rgb(r, g, b));
         cloudPercent.setTranslateX(-15);
         cloudPercent.setTranslateY(5);
         cloudPercent.setColor(Color.BLUE);
@@ -266,11 +522,13 @@ class Cloud extends GameObject {
         boundingBox.setTranslateY(-50);
         boundingBox.setWidth(100);
         boundingBox.setHeight(100);
-        boundingBox.setStroke((Color.YELLOW));
+        boundingBox.setStroke((Color.TRANSPARENT));
         boundingBox.setFill(Color.TRANSPARENT);
         add(boundingBox);
 
-        this.translate(150, 200);
+        this.translate(150, getCloudPositionY);
+        this.translate(rand.nextDouble(GameApp.gameSize.getX() / 3),
+         rand.nextDouble(GameApp.gameSize.getY()));
         this.getTransforms().clear();
         this.getTransforms().add(translation);
 
@@ -287,9 +545,29 @@ class Cloud extends GameObject {
     }
 
     public void seedCloud() {
-        if(saturation <= 100) {
+        if(saturation < 100) {
             cloudPercent.setText(saturation++ + "%");
+            cloud.setFill(Color.rgb(r--, g--, b--));
         }
+    }
+
+    public void reset() {
+        saturation = 0;
+        delayCounter = 0;
+        r = 255;
+        g = 255;
+        b = 255;
+        cloudIsThirty = false;
+        cloudPositionX = -200;
+        cloud.setFill(Color.rgb(r, g, b));
+    }
+
+    public boolean cloudStateDead() {
+        return state.cloudIsDead();
+    }
+
+    public void changeState(CloudStates state) {
+        this.state = state;
     }
 
     public void update() {
@@ -297,6 +575,7 @@ class Cloud extends GameObject {
             delayCounter = 50;
             if (saturation != 0) {
                 cloudPercent.setText(saturation-- + "%");
+                cloud.setFill(Color.rgb(r++, g++, b++));
                 if(saturation >= 30) {
                     cloudIsThirty = true;
                 }
@@ -306,13 +585,19 @@ class Cloud extends GameObject {
             delayCounter--;
             cloudIsThirty = false;
         }
+        translate(translation.getX() + cloudSpeed, translation.getY());
+        state.whichState(translation.getX());
+        getTransforms().clear();
+        getTransforms().add(translation);
+
     }
 
 }
 
 class Helipad extends GameObject {
+        Rectangle helipadOut;
     public Helipad() {
-        Rectangle helipadOut = new Rectangle(80, 80);
+       helipadOut = new Rectangle(80, 80);
         helipadOut.setStroke((Color.GRAY));
 
         Circle helipadIn = new Circle(30);
@@ -327,6 +612,10 @@ class Helipad extends GameObject {
 
         add(helipadOut);
         add(helipadIn);
+    }
+
+    public Shape getBounds() {
+        return helipadOut;
     }
 }
 
@@ -373,18 +662,112 @@ class HeliBlade extends GameObject {
     }
 }
 
+abstract class HelicopterStates {
+    Helicopter helicopter;
+    int maxSpeed = 20;
+    int delay = 0;
+
+    public HelicopterStates(Helicopter helicopter) {
+        this.helicopter = helicopter;
+    }
+
+    abstract void Ignition();
+    abstract int BladeState(int bladeSpeed);
+}
+
+class HelicopterOff extends HelicopterStates {
+    HelicopterOff(Helicopter helicopter) {
+        super(helicopter);
+    }
+
+    @Override
+    void Ignition() {
+        helicopter.changeState(new HelicopterStarting(helicopter));
+    }
+
+    @Override
+    int BladeState(int bladeSpeed) {
+        return 0;
+    }
+}
+
+class HelicopterStarting extends HelicopterStates {
+
+    HelicopterStarting(Helicopter helicopter) {
+        super(helicopter);
+    }
+    @Override
+    void Ignition() {
+        helicopter.changeState(new HelicopterStopping(helicopter));
+    }
+
+    @Override
+    int BladeState(int bladeSpeed) {
+        if(bladeSpeed < maxSpeed) {
+            bladeSpeed++;
+        }
+        if(bladeSpeed == maxSpeed) {
+            helicopter.changeState(new HelicopterReady(helicopter));
+        }
+        return bladeSpeed;
+    }
+}
+
+class HelicopterStopping extends HelicopterStates {
+    HelicopterStopping(Helicopter helicopter) {
+        super(helicopter);
+    }
+
+    @Override
+    void Ignition() {
+        helicopter.changeState(new HelicopterStarting(helicopter));
+    }
+
+    @Override
+    int BladeState(int bladeSpeed) {
+        if(bladeSpeed > 0) {
+            bladeSpeed--;
+        }
+        if(bladeSpeed == 0) {
+            helicopter.changeState(new HelicopterOff(helicopter));
+        }
+        return bladeSpeed;
+    }
+}
+
+class HelicopterReady extends HelicopterStates {
+    HelicopterReady(Helicopter helicopter) {
+        super(helicopter);
+    }
+
+    @Override
+    void Ignition() {
+        helicopter.changeState(new HelicopterStopping(helicopter));
+    }
+
+    @Override
+    int BladeState(int bladeSpeed) {
+        return maxSpeed;
+    }
+}
+
 class Helicopter extends GameObject {
     double speedVertical;
     double maxSpeed = 10;
     double maxSpeedBack = -2;
     double rotateHeli;
     int fuel = 25000;
+    int bladeSpeed;
     boolean ignition = false;
+    boolean emptyTank = false;
     Rectangle boundingBox;
     HeliBody heliBody = new HeliBody();
     HeliBlade heliBlade = new HeliBlade();
     GameText helicopterFuel = new GameText("F:" + fuel);
+    HelicopterStates state;
+
     public Helicopter() {
+        state = new HelicopterOff(this);
         Ellipse helicopter = new Ellipse();
         helicopter.setRadiusX(10);
         helicopter.setRadiusY(10);
@@ -399,8 +782,8 @@ class Helicopter extends GameObject {
         add(heliBody);
         add(heliBlade);
 
-        helicopterFuel.setTranslateX(-25);
-        helicopterFuel.setTranslateY(-15);
+        helicopterFuel.setTranslateX(-20);
+        helicopterFuel.setTranslateY(-18);
         helicopterFuel.setColor(Color.YELLOW);
         add(helicopterFuel);
 
@@ -423,25 +806,25 @@ class Helicopter extends GameObject {
     }
 
     public void forward() {
-        if(ignition && speedVertical < maxSpeed) {
+        if(state instanceof HelicopterReady) {
             speedVertical = speedVertical + 0.1;
         }
     }
 
     public void back() {
-        if(ignition && speedVertical > maxSpeedBack) {
+        if(state instanceof HelicopterReady) {
             speedVertical = speedVertical - 0.1;
         }
     }
 
     public void left() {
-        if(ignition) {
+        if(state instanceof HelicopterReady) {
             rotateHeli = rotateHeli + 15;
         }
     }
 
     public void right() {
-        if(ignition) {
+        if(state instanceof HelicopterReady) {
             rotateHeli = rotateHeli - 15;
         }
     }
@@ -453,7 +836,28 @@ class Helicopter extends GameObject {
     }
 
     public void ignition() {
-        ignition =! ignition;
+        state.Ignition();
+    }
+
+    public boolean emptyFuel() {
+        if(fuel == 0) {
+            emptyTank = true;
+        }
+        return emptyTank;
+    }
+
+    public void changeState(HelicopterStates state) {
+        this.state = state;
+    }
+
+    public void reset() {
+        speedVertical = 0;
+        rotateHeli = 0;
+        maxSpeed = 0;
+        maxSpeedBack = 0;
+        fuel = 0;
+        bladeSpeed = 0;
+        state = new HelicopterOff(this);
     }
 
     public void update() {
@@ -463,8 +867,13 @@ class Helicopter extends GameObject {
         translation.setY(translation.getY() + Math.cos(Math.toRadians(rotateHeli)) * speedVertical);
         this.getTransforms().addAll(translation, rotate);
 
-        this.fuelDecrease();
-        helicopterFuel.setText("F" + fuel);
+        bladeSpeed = state.BladeState(bladeSpeed);
+        heliBlade.update(bladeSpeed);
+
+        if(state instanceof HelicopterReady) {
+            this.fuelDecrease();
+            helicopterFuel.setText("F" + fuel);
+        }
     }
 }
 
