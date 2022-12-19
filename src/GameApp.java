@@ -833,7 +833,7 @@ class Helicopter extends GameObject {
         boundingBox.setTranslateY(-30);
         boundingBox.setWidth(60);
         boundingBox.setHeight(60);
-        boundingBox.setStroke((Color.YELLOW));
+        boundingBox.setStroke((Color.TRANSPARENT));
         boundingBox.setFill(Color.TRANSPARENT);
         add(boundingBox);
 
