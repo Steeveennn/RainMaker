@@ -364,7 +364,6 @@ class Pond extends GameObject {
     public void pondFill() {
         if(capacity < 100) {
             pondPercent.setText(capacity++ + "%");
-            System.out.println(capacity);
             radius++;
         }
     }
